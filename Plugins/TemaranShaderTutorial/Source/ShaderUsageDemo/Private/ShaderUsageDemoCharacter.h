@@ -6,6 +6,8 @@
 
 #include "CoreMinimal.h"
 
+#include "Runtime/Core/Public/PixelFormat.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "GameFramework/Character.h"
 #include "ShaderUsageDemoCharacter.generated.h"
 
@@ -27,7 +29,7 @@ public:
 	class USceneComponent* FP_MuzzleLocation;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FirstPersonCameraComponent;
+	class UCameraComponent* FirstPersonCameraComponent;	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	class USoundBase* FireSound;
@@ -43,6 +45,25 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	FVector GunOffset;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class USceneCaptureComponent2D* capture_2D_depth_;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class USceneCaptureComponent2D* capture_2D_segmentation_;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class USceneCaptureComponent2D* capture_2D_intensity_;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UTextureRenderTarget2D* render_target_2D_depth_;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UTextureRenderTarget2D* render_target_2D_segmentation_;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	class UTextureRenderTarget2D* render_target_2D_intensity_;
+
 
 	/************************************************************************/
 	/* Plugin Shader Demo variables!                                        */
@@ -60,8 +81,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = ShaderDemo)
 	class UTextureRenderTarget2D* RenderTarget;
 
+	
 public:
 	AShaderUsageDemoCharacter();
+	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void BeginDestroy() override;
 	virtual void Tick(float DeltaSeconds) override;

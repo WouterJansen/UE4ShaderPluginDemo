@@ -5,7 +5,6 @@
 #include "ShaderDeclarationDemoModule.h"
 
 #include "ComputeShaderExample.h"
-#include "PixelShaderExample.h"
 
 #include "Misc/Paths.h"
 #include "Misc/FileHelper.h"
@@ -22,7 +21,6 @@ IMPLEMENT_MODULE(FShaderDeclarationDemoModule, ShaderDeclarationDemo)
 // Declare some GPU stats so we can track them later
 DECLARE_GPU_STAT_NAMED(ShaderPlugin_Render, TEXT("ShaderPlugin: Root Render"));
 DECLARE_GPU_STAT_NAMED(ShaderPlugin_Compute, TEXT("ShaderPlugin: Render Compute Shader"));
-DECLARE_GPU_STAT_NAMED(ShaderPlugin_Pixel, TEXT("ShaderPlugin: Render Pixel Shader"));
 
 void FShaderDeclarationDemoModule::StartupModule()
 {
@@ -100,7 +98,17 @@ void FShaderDeclarationDemoModule::Draw_RenderThread(const FShaderUsageExamplePa
 {
 	check(IsInRenderingThread());
 
-	if (!DrawParameters.RenderTarget)
+	if (!DrawParameters.RenderTargetDepth)
+	{
+		return;
+	}
+
+	if (!DrawParameters.RenderTargetSemantics)
+	{
+		return;
+	}
+
+	if (!DrawParameters.RenderTargetIntensity)
 	{
 		return;
 	}
@@ -110,13 +118,14 @@ void FShaderDeclarationDemoModule::Draw_RenderThread(const FShaderUsageExamplePa
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_ShaderPlugin_Render); // Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(RHICmdList, ShaderPlugin_Render); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-	if (!ComputeShaderOutput.IsValid())
-	{
-		FPooledRenderTargetDesc ComputeShaderOutputDesc(FPooledRenderTargetDesc::Create2DDesc(DrawParameters.GetRenderTargetSize(), PF_R32_UINT, FClearValueBinding::None, TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
-		ComputeShaderOutputDesc.DebugName = TEXT("ShaderPlugin_ComputeShaderOutput");
-		GRenderTargetPool.FindFreeElement(RHICmdList, ComputeShaderOutputDesc, ComputeShaderOutput, TEXT("ShaderPlugin_ComputeShaderOutput"));
-	}
+	OutputBufferXYZI_array_.SetNum(32);
+	OutputBufferSemantics_array_.SetNum(32);
+	OutputBufferXYZI_resource_.ResourceArray = &OutputBufferXYZI_array_;
+	OutputBufferSemantics_resource_.ResourceArray = &OutputBufferSemantics_array_;
+	OutputBufferXYZI_buffer_ = RHICreateStructuredBuffer(sizeof(float), sizeof(FVector4) * 32, BUF_ShaderResource | BUF_UnorderedAccess, OutputBufferXYZI_resource_);
+	OutputBufferSemantics_buffer_ = RHICreateStructuredBuffer(sizeof(float), sizeof(FVector4) * 32, BUF_ShaderResource | BUF_UnorderedAccess, OutputBufferSemantics_resource_);
+	OutputBufferXYZI_UAV_ = RHICreateUnorderedAccessView(OutputBufferXYZI_buffer_, /* bool bUseUAVCounter */ false, /* bool bAppendBuffer */ false);
+	OutputBufferSemantics_UAV_ = RHICreateUnorderedAccessView(OutputBufferSemantics_buffer_, /* bool bUseUAVCounter */ false, /* bool bAppendBuffer */ false);
 
-	FComputeShaderExample::RunComputeShader_RenderThread(RHICmdList, DrawParameters, ComputeShaderOutput->GetRenderTargetItem().UAV);
-	FPixelShaderExample::DrawToRenderTarget_RenderThread(RHICmdList, DrawParameters, ComputeShaderOutput->GetRenderTargetItem().TargetableTexture);
+	FComputeShaderExample::RunComputeShader_RenderThread(RHICmdList, DrawParameters, DrawParameters.RenderTargetDepth->GetRenderTargetResource()->TextureRHI, DrawParameters.RenderTargetSemantics->GetRenderTargetResource()->TextureRHI, DrawParameters.RenderTargetIntensity->GetRenderTargetResource()->TextureRHI, OutputBufferXYZI_UAV_, OutputBufferSemantics_UAV_);
 }

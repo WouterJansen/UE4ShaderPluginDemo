@@ -1,35 +1,19 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "4.24",
+	"EngineAssociation": "{9230FE0D-4708-F09F-9644-669A1E5C7303}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
 		{
 			"Name": "ShaderPluginDemo",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
 		}
 	],
 	"Plugins": [
-		{
-			"Name": "OculusVR",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win32",
-				"Win64",
-				"Android"
-			]
-		},
-		{
-			"Name": "SteamVR",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Win32",
-				"Win64",
-				"Linux",
-				"Mac"
-			]
-		},
 		{
 			"Name": "RenderDocPlugin",
 			"Enabled": true

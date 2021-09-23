@@ -13,6 +13,8 @@
 #include "GameFramework/InputSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Runtime/Engine/Classes/Materials/MaterialInstanceDynamic.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Engine/TextureRenderTarget2D.h"
 
 AShaderUsageDemoCharacter::AShaderUsageDemoCharacter()
 {
@@ -25,6 +27,10 @@ AShaderUsageDemoCharacter::AShaderUsageDemoCharacter()
 	FirstPersonCameraComponent->SetupAttachment(GetCapsuleComponent());
 	FirstPersonCameraComponent->SetRelativeLocation(FVector(-39.56f, 1.75f, 64.f)); // Position the camera
 	FirstPersonCameraComponent->bUsePawnControlRotation = true;
+
+	capture_2D_depth_ = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Lidar2DDepth"));
+	capture_2D_segmentation_ = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Lidar2DSegmentation"));
+	capture_2D_intensity_ = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("Lidar2DIntensity"));
 
 	Mesh1P = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterMesh1P"));
 	Mesh1P->SetOnlyOwnerSee(true);
@@ -52,6 +58,47 @@ AShaderUsageDemoCharacter::AShaderUsageDemoCharacter()
 	ComputeShaderSimulationSpeed = 1.0;
 	ComputeShaderBlend = 0.5f;
 	TotalTimeSecs = 0.0f;
+}
+
+void AShaderUsageDemoCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	render_target_2D_depth_ = NewObject<UTextureRenderTarget2D>();
+	render_target_2D_segmentation_ = NewObject<UTextureRenderTarget2D>();
+	render_target_2D_intensity_ = NewObject<UTextureRenderTarget2D>();
+	capture_2D_depth_->SetRelativeRotation(FRotator(0, 0, 0));
+	capture_2D_depth_->SetRelativeLocation(FVector(0, 0, 0));
+	capture_2D_depth_->AttachTo(this->RootComponent);
+	capture_2D_depth_->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+	capture_2D_segmentation_->SetRelativeRotation(FRotator(0, 0, 0));
+	capture_2D_segmentation_->SetRelativeLocation(FVector(0, 0, 0));
+	capture_2D_segmentation_->AttachTo(this->RootComponent);
+	capture_2D_segmentation_->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+	capture_2D_intensity_->SetRelativeRotation(FRotator(0, 0, 0));
+	capture_2D_intensity_->SetRelativeLocation(FVector(0, 0, 0));
+	capture_2D_intensity_->AttachTo(this->RootComponent);
+	capture_2D_intensity_->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+
+	render_target_2D_depth_->InitCustomFormat(1024, 1024, PF_B8G8R8A8, true);
+	render_target_2D_segmentation_->InitCustomFormat(1024, 1024, PF_B8G8R8A8, true);
+	render_target_2D_intensity_->InitCustomFormat(1024, 1024, PF_B8G8R8A8, true);
+
+	capture_2D_depth_->TextureTarget = render_target_2D_depth_;
+	capture_2D_depth_->bAlwaysPersistRenderingState = true;
+	capture_2D_depth_->bCaptureEveryFrame = false;
+	capture_2D_depth_->bCaptureOnMovement = false;
+	capture_2D_depth_->bUseCustomProjectionMatrix = false;
+	capture_2D_segmentation_->TextureTarget = render_target_2D_segmentation_;
+	capture_2D_segmentation_->bAlwaysPersistRenderingState = true;
+	capture_2D_segmentation_->bCaptureEveryFrame = false;
+	capture_2D_segmentation_->bCaptureOnMovement = false;
+	capture_2D_segmentation_->bUseCustomProjectionMatrix = false;
+	capture_2D_intensity_->TextureTarget = render_target_2D_intensity_;
+	capture_2D_intensity_->bAlwaysPersistRenderingState = true;
+	capture_2D_intensity_->bCaptureEveryFrame = false;
+	capture_2D_intensity_->bCaptureOnMovement = false;
+	capture_2D_intensity_->bUseCustomProjectionMatrix = false;
+
 }
 
 void AShaderUsageDemoCharacter::BeginPlay()
@@ -93,7 +140,18 @@ void AShaderUsageDemoCharacter::Tick(float DeltaSeconds)
 		
 	ComputeShaderBlend = FMath::Clamp(ComputeShaderBlend + ComputeShaderBlendScalar * DeltaSeconds, 0.0f, 1.0f);
 
-	FShaderUsageExampleParameters DrawParameters(RenderTarget);
+	capture_2D_depth_->FOVAngle = 90;
+	capture_2D_segmentation_->FOVAngle = 90;
+	capture_2D_intensity_->FOVAngle = 90;
+	capture_2D_depth_->CaptureScene();
+	capture_2D_segmentation_->CaptureScene();
+	capture_2D_intensity_->CaptureScene();
+
+	TArray<FVector4> OutputBufferXYZI;
+	TArray<FVector4> OutputBufferSemantics;
+
+
+	FShaderUsageExampleParameters DrawParameters(render_target_2D_depth_, render_target_2D_segmentation_, render_target_2D_intensity_, OutputBufferXYZI, OutputBufferSemantics);
 	{
 		DrawParameters.SimulationState = ComputeShaderSimulationSpeed * TotalTimeSecs;
 		DrawParameters.ComputeShaderBlend = ComputeShaderBlend;
@@ -130,7 +188,7 @@ void AShaderUsageDemoCharacter::OnFire()
 				UStaticMeshComponent* CurrentStaticMeshPtr = StaticMeshComponents[i];
 				CurrentStaticMeshPtr->SetMaterial(0, MaterialToApplyToClickedObject);
 				UMaterialInstanceDynamic* MID =	CurrentStaticMeshPtr->CreateAndSetMaterialInstanceDynamic(0);
-				MID->SetTextureParameterValue("InputTexture", (UTexture*)RenderTarget);
+				MID->SetTextureParameterValue("InputTexture", (UTexture*)render_target_2D_depth_);
 			}
 		}
 	}

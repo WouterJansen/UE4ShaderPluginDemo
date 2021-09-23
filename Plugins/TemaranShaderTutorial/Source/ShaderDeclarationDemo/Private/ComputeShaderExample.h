@@ -13,5 +13,5 @@
 class FComputeShaderExample
 {
 public:
-	static void RunComputeShader_RenderThread(FRHICommandListImmediate& RHICmdList, const FShaderUsageExampleParameters& DrawParameters, FUnorderedAccessViewRHIRef ComputeShaderOutputUAV);
+	static void RunComputeShader_RenderThread(FRHICommandListImmediate& RHICmdList, const FShaderUsageExampleParameters& DrawParameters, FTextureRHIRef inputTextureDepth, FTextureRHIRef inputTextureSemantics, FTextureRHIRef inputTextureIntensity, FUnorderedAccessViewRHIRef outputBufferXYZI, FUnorderedAccessViewRHIRef outputBufferSemantics);
 };

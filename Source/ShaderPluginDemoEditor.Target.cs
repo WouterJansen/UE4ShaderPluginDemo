@@ -11,7 +11,6 @@ public class ShaderPluginDemoEditorTarget : TargetRules
 		: base(Target)
 	{
 		Type = TargetType.Editor;
-		DefaultBuildSettings = BuildSettingsVersion.V2;
 		ExtraModuleNames.Add("ShaderPluginDemo");
 	}
 }

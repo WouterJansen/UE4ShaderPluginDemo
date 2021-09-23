@@ -8,32 +8,40 @@
 
 #include "Modules/ModuleInterface.h"
 #include "Modules/ModuleManager.h"
-
+#include "CoreUObject.h"
 #include "RenderGraphResources.h"
 #include "Runtime/Engine/Classes/Engine/TextureRenderTarget2D.h"
 
-// This struct contains all the data we need to pass from the game thread to draw our effect.
 struct FShaderUsageExampleParameters
 {
-	UTextureRenderTarget2D* RenderTarget;
+	UTextureRenderTarget2D* RenderTargetDepth;
+	UTextureRenderTarget2D* RenderTargetSemantics;
+	UTextureRenderTarget2D* RenderTargetIntensity;
 	FColor StartColor;
 	FColor EndColor;
 	float SimulationState;
 	float ComputeShaderBlend;
-	
+	TArray<FVector4> OutputBufferXYZI;
+	TArray<FVector4> OutputBufferSemantics;
+
 	FIntPoint GetRenderTargetSize() const
 	{
 		return CachedRenderTargetSize;
 	}
 
 	FShaderUsageExampleParameters()	{ }
-	FShaderUsageExampleParameters(UTextureRenderTarget2D* InRenderTarget)
-		: RenderTarget(InRenderTarget)
-		, StartColor(FColor::White)
-		, EndColor(FColor::White)
-		, SimulationState(1.0f)
+	FShaderUsageExampleParameters(UTextureRenderTarget2D* InRenderTargetDepth, UTextureRenderTarget2D* RenderTargetSemantics, UTextureRenderTarget2D* RenderTargetIntensity,
+		TArray<FVector4> OutputBufferXYZI, TArray<FVector4> OutputBufferSemantics)
+		: RenderTargetDepth(InRenderTargetDepth),
+		  RenderTargetSemantics(RenderTargetSemantics),
+		  RenderTargetIntensity(RenderTargetIntensity),
+		  OutputBufferXYZI(OutputBufferXYZI),
+		  OutputBufferSemantics(OutputBufferSemantics),
+		  StartColor(FColor::White),
+		  EndColor(FColor::White),
+		  SimulationState(1.0f)
 	{
-		CachedRenderTargetSize = RenderTarget ? FIntPoint(RenderTarget->SizeX, RenderTarget->SizeY) : FIntPoint::ZeroValue;
+		CachedRenderTargetSize = InRenderTargetDepth ? FIntPoint(InRenderTargetDepth->SizeX, InRenderTargetDepth->SizeY) : FIntPoint::ZeroValue;
 	}
 
 private:
@@ -94,11 +102,19 @@ public:
 	void UpdateParameters(FShaderUsageExampleParameters& DrawParameters);
 
 private:
-	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput;
 	FShaderUsageExampleParameters CachedShaderUsageExampleParameters;
 	FDelegateHandle OnPostResolvedSceneColorHandle;
 	FCriticalSection RenderEveryFrameLock;
 	volatile bool bCachedParametersValid;
+
+	TResourceArray<FVector4> OutputBufferXYZI_array_;
+	TResourceArray<FVector4> OutputBufferSemantics_array_;
+	FRHIResourceCreateInfo OutputBufferXYZI_resource_;
+	FRHIResourceCreateInfo OutputBufferSemantics_resource_;
+	FStructuredBufferRHIRef OutputBufferXYZI_buffer_;
+	FStructuredBufferRHIRef OutputBufferSemantics_buffer_;
+	FUnorderedAccessViewRHIRef OutputBufferXYZI_UAV_;
+	FUnorderedAccessViewRHIRef OutputBufferSemantics_UAV_;
 
 	void PostResolveSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext);
 	void Draw_RenderThread(const FShaderUsageExampleParameters& DrawParameters);

@@ -25,9 +25,13 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FComputeShaderExampleCS, FGlobalShader);
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_UAV(RWTexture2D<uint>, OutputTexture)
+		SHADER_PARAMETER_TEXTURE(Texture2D<FVector4>, InputTextureDepth)
+		SHADER_PARAMETER_TEXTURE(Texture2D<FVector4>, InputTextureSemantics)
+		SHADER_PARAMETER_TEXTURE(Texture2D<FVector4>, InputTextureIntensity)
 		SHADER_PARAMETER(FVector2D, TextureSize) // Metal doesn't support GetDimensions(), so we send in this data via our parameters.
 		SHADER_PARAMETER(float, SimulationState)
+		SHADER_PARAMETER_UAV(RWStructuredBuffer<FVector4>, OutputBufferXYZI)
+		SHADER_PARAMETER_UAV(RWStructuredBuffer<FVector4>, OutputBufferSemantics)
 	END_SHADER_PARAMETER_STRUCT()
 
 public:
@@ -50,18 +54,21 @@ public:
 //                            ShaderType                            ShaderPath                     Shader function name    Type
 IMPLEMENT_GLOBAL_SHADER(FComputeShaderExampleCS, "/TutorialShaders/Private/ComputeShader.usf", "MainComputeShader", SF_Compute);
 
-void FComputeShaderExample::RunComputeShader_RenderThread(FRHICommandListImmediate& RHICmdList, const FShaderUsageExampleParameters& DrawParameters, FUnorderedAccessViewRHIRef ComputeShaderOutputUAV)
+void FComputeShaderExample::RunComputeShader_RenderThread(FRHICommandListImmediate& RHICmdList, const FShaderUsageExampleParameters& DrawParameters, FTextureRHIRef inputTextureDepth, FTextureRHIRef inputTextureSemantics, FTextureRHIRef inputTextureIntensity, FUnorderedAccessViewRHIRef outputBufferXYZI_UAV, FUnorderedAccessViewRHIRef outputBufferSemantics_UAV)
 {
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_ShaderPlugin_ComputeShader); // Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(RHICmdList, ShaderPlugin_Compute); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	UnbindRenderTargets(RHICmdList);
-	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, ComputeShaderOutputUAV);
 	
 	FComputeShaderExampleCS::FParameters PassParameters;
-	PassParameters.OutputTexture = ComputeShaderOutputUAV;
+	PassParameters.InputTextureDepth = inputTextureDepth;
+	PassParameters.InputTextureSemantics = inputTextureSemantics;
+	PassParameters.InputTextureIntensity = inputTextureIntensity;
 	PassParameters.TextureSize = FVector2D(DrawParameters.GetRenderTargetSize().X, DrawParameters.GetRenderTargetSize().Y);
 	PassParameters.SimulationState = DrawParameters.SimulationState;
+	PassParameters.OutputBufferXYZI = outputBufferXYZI_UAV;
+	PassParameters.OutputBufferXYZI = outputBufferSemantics_UAV;
 
 	TShaderMapRef<FComputeShaderExampleCS> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, 

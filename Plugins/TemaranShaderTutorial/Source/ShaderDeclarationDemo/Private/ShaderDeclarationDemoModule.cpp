@@ -92,6 +92,11 @@ void FShaderDeclarationDemoModule::PostResolveSceneColor_RenderThread(FRHIComman
 	RenderEveryFrameLock.Unlock();
 
 	Draw_RenderThread(Copy);
+
+	char* lockXYZI = (char*)RHICmdList.LockStructuredBuffer(OutputBufferXYZI_buffer_, 0, sizeof(FVector4) * 32, EResourceLockMode::RLM_ReadOnly);
+	const TArray<FVector4>* outputBufferXYZI_temp = (TArray<FVector4>*)RHICmdList.LockStructuredBuffer(OutputBufferXYZI_buffer_, 0, sizeof(FVector4) * 32, EResourceLockMode::RLM_ReadOnly);
+	FMemory::Memcpy(Copy.OutputBufferXYZI.GetData(), outputBufferXYZI_temp, sizeof(FVector4) * 32);
+	RHICmdList.UnlockStructuredBuffer(OutputBufferXYZI_buffer_);
 }
 
 void FShaderDeclarationDemoModule::Draw_RenderThread(const FShaderUsageExampleParameters& DrawParameters)
@@ -128,4 +133,13 @@ void FShaderDeclarationDemoModule::Draw_RenderThread(const FShaderUsageExamplePa
 	OutputBufferSemantics_UAV_ = RHICreateUnorderedAccessView(OutputBufferSemantics_buffer_, /* bool bUseUAVCounter */ false, /* bool bAppendBuffer */ false);
 
 	FComputeShaderExample::RunComputeShader_RenderThread(RHICmdList, DrawParameters, DrawParameters.RenderTargetDepth->GetRenderTargetResource()->TextureRHI, DrawParameters.RenderTargetSemantics->GetRenderTargetResource()->TextureRHI, DrawParameters.RenderTargetIntensity->GetRenderTargetResource()->TextureRHI, OutputBufferXYZI_UAV_, OutputBufferSemantics_UAV_);
+}
+
+void FShaderDeclarationDemoModule::Get_Data(TArray<FVector4> outputBufferXYZI, TArray<FVector4> outputBufferSemantics)
+{
+	FRHICommandListImmediate& RHICmdList = GRHICommandList.GetImmediateCommandList();
+	char* lockXYZI = (char*)RHICmdList.LockStructuredBuffer(OutputBufferXYZI_buffer_, 0, sizeof(FVector4) * 32, EResourceLockMode::RLM_ReadOnly);
+	const TArray<FVector4>* outputBufferXYZI_temp = (TArray<FVector4>*)RHICmdList.LockStructuredBuffer(OutputBufferXYZI_buffer_, 0, sizeof(FVector4) * 32, EResourceLockMode::RLM_ReadOnly);
+	FMemory::Memcpy(outputBufferXYZI.GetData(), outputBufferXYZI_temp, sizeof(FVector4) * 32);
+	RHICmdList.UnlockStructuredBuffer(OutputBufferXYZI_buffer_);
 }

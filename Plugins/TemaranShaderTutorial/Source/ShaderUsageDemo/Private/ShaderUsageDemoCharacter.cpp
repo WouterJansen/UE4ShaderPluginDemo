@@ -147,11 +147,8 @@ void AShaderUsageDemoCharacter::Tick(float DeltaSeconds)
 	capture_2D_segmentation_->CaptureScene();
 	capture_2D_intensity_->CaptureScene();
 
-	TArray<FVector4> OutputBufferXYZI;
-	TArray<FVector4> OutputBufferSemantics;
 
-
-	FShaderUsageExampleParameters DrawParameters(render_target_2D_depth_, render_target_2D_segmentation_, render_target_2D_intensity_, OutputBufferXYZI, OutputBufferSemantics);
+	FShaderUsageExampleParameters DrawParameters(render_target_2D_depth_, render_target_2D_segmentation_, render_target_2D_intensity_, outputBufferXYZI, outputBufferSemantics);
 	{
 		DrawParameters.SimulationState = ComputeShaderSimulationSpeed * TotalTimeSecs;
 		DrawParameters.ComputeShaderBlend = ComputeShaderBlend;
@@ -173,6 +170,11 @@ void AShaderUsageDemoCharacter::OnFire()
 	FVector EndLocation = StartLocation + Direction.Vector() * 10000;
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
+	TArray<FVector4> outputBufferXYZI;
+	outputBufferXYZI.Init(FVector4(0,0,0,0), 32);
+	TArray<FVector4> outputBufferSemantics;
+	outputBufferSemantics.Init(FVector4(0, 0, 0, 0), 32);
+	//FShaderDeclarationDemoModule::Get().Get_Data(outputBufferXYZI, outputBufferSemantics);
 
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams))
 	{

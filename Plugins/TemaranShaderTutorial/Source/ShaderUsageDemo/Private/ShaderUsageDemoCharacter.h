@@ -64,6 +64,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	class UTextureRenderTarget2D* render_target_2D_intensity_;
 
+	TArray<FVector4> outputBufferXYZI;
+	TArray<FVector4> outputBufferSemantics;
+
 
 	/************************************************************************/
 	/* Plugin Shader Demo variables!                                        */

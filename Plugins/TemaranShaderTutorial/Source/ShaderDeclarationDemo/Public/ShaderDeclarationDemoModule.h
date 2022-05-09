@@ -101,6 +101,8 @@ public:
 	// different intervals to save on locking and GPU transfer time.
 	void UpdateParameters(FShaderUsageExampleParameters& DrawParameters);
 
+	void Get_Data(TArray<FVector4> outputBufferXYZI, TArray<FVector4> outputBufferSemantics);
+
 private:
 	FShaderUsageExampleParameters CachedShaderUsageExampleParameters;
 	FDelegateHandle OnPostResolvedSceneColorHandle;
